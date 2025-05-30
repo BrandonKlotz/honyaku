@@ -26,6 +26,7 @@ module Honyaku
                  desc: "Specify which AI model to use (defaults to gpt-4, use gpt-3.5-turbo for faster but less accurate translations)"
     method_option :backup, aliases: "-b", type: :boolean, desc: "Create .bak files before modifying"
     method_option :force, type: :boolean, desc: "Retranslate files even if target is newer than source"
+    method_option :keep_invalid, type: :boolean, desc: "Keep files even if they have YAML validation errors"
     def translate(locale)
       api_key = ENV["HONYAKU_OPENAI_API_KEY"] || ENV["OPENAI_API_KEY"]
       unless api_key
@@ -247,12 +248,12 @@ module Honyaku
           rescue => e
             if e.message.include?("needs retranslation") && attempts < max_attempts
               puts "⚠️  Translation attempt #{attempts} produced invalid YAML, retrying..."
-              # Clean up the file before retrying
-              File.unlink(target_file) if File.exist?(target_file)
+              # Clean up the file before retrying unless keep_invalid is set
+              File.unlink(target_file) if File.exist?(target_file) && !options[:keep_invalid]
               next
             else
-              # Clean up and re-raise
-              File.unlink(target_file) if File.exist?(target_file)
+              # Clean up and re-raise unless keep_invalid is set
+              File.unlink(target_file) if File.exist?(target_file) && !options[:keep_invalid]
               raise e
             end
           end

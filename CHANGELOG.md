@@ -12,3 +12,7 @@
 
 - Fix to allow parsing of YAML files with aliases
 - Fix CLI version command
+
+## [0.1.3] - 2025-05-30
+
+- Allow option to keep files with errors in the YAML formatting
