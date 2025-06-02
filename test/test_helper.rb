@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+require "minitest/autorun"
 require "honyaku"
 
-require "minitest/autorun"
+# Add the lib directory to the load path
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
