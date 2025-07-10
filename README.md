@@ -11,6 +11,7 @@ Honyaku was built using [Cursor Composer](https://docs.cursor.com/composer) with
 - Handles large files through automatic chunking
 - Automatically fixes YAML formatting issues caused by the GPT
 - Smart file skipping to avoid unnecessary retranslation
+- Supports retranslating files with previous translations, adding only newly added keys
 
 # Example Output
 

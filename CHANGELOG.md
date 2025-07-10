@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.1.3] - 2025-07-10
+
+- Add support for retranslating files with previous translations, adding only newly added keys
+
 ## [0.1.0] - 2025-02-17
 
 - Initial release
