@@ -192,8 +192,13 @@ module Honyaku
         target_time = get_last_modified_time(target_file)
 
         if target_time && source_time && target_time > source_time
-          puts "⏭️  Skipping #{file_path} - translation is up to date"
-          return
+          # Check if source has new keys that aren't in target
+          if has_new_keys?(file_path, target_file)
+            puts "🔄 Found new keys in #{file_path}, updating translation..."
+          else
+            puts "⏭️  Skipping #{file_path} - translation is up to date"
+            return
+          end
         end
       end
 
@@ -309,6 +314,55 @@ module Honyaku
       Time.parse(time_str)
     rescue
       nil
+    end
+
+    def has_new_keys?(source_file, target_file)
+      begin
+        source_data = YAML.safe_load(File.read(source_file), aliases: true)
+        target_data = YAML.safe_load(File.read(target_file), aliases: true)
+        
+        # Extract keys from the nested locale content (skip top-level locale keys)
+        source_keys = []
+        target_keys = []
+        
+        # For each top-level locale, extract its nested keys
+        source_data.each do |locale, content|
+          source_keys.concat(extract_all_keys(content)) if content.is_a?(Hash)
+        end
+        
+        target_data.each do |locale, content|
+          target_keys.concat(extract_all_keys(content)) if content.is_a?(Hash)
+        end
+        
+        # Check if source has keys that target doesn't have
+        new_keys = source_keys - target_keys
+        new_keys.any?
+      rescue => e
+        # If we can't parse either file, err on the side of caution and retranslate
+        puts "⚠️  Unable to compare keys (#{e.message}), will retranslate"
+        true
+      end
+    end
+
+    def extract_all_keys(data, prefix = "")
+      keys = []
+      
+      case data
+      when Hash
+        data.each do |key, value|
+          current_key = prefix.empty? ? key.to_s : "#{prefix}.#{key}"
+          keys << current_key
+          keys.concat(extract_all_keys(value, current_key))
+        end
+      when Array
+        data.each_with_index do |value, index|
+          current_key = "#{prefix}[#{index}]"
+          keys << current_key
+          keys.concat(extract_all_keys(value, current_key))
+        end
+      end
+      
+      keys
     end
 
     desc "status", "Show translation status for all locales"
