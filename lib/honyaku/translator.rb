@@ -14,6 +14,10 @@ module Honyaku
 
     def translate_hash(file_path, from_locale, to_locale)
       yaml_content = File.read(file_path)
+      translate_yaml_content(yaml_content, from_locale, to_locale)
+    end
+
+    def translate_yaml_content(yaml_content, from_locale, to_locale)
       lines = yaml_content.lines
       
       # If the file is small enough, translate it all at once

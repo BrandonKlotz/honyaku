@@ -8,6 +8,8 @@ class TestHonyaku < Minitest::Test
   end
 
   def test_it_does_something_useful
-    assert false
+    # Test that we can create a CLI instance
+    cli = Honyaku::CLI.new
+    refute_nil cli
   end
 end
