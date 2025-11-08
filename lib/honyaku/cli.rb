@@ -18,6 +18,9 @@ module Honyaku
 
         # Translate using GPT-4 for higher accuracy
         $ honyaku translate de --model gpt-4 --path config/locales/en.yml
+
+        # Keep files with invalid YAML instead of retrying translation
+        $ honyaku translate ja --path config/locales/en.yml --keep-invalid
     LONGDESC
     method_option :from, aliases: "-f", desc: "Source locale (defaults to en)"
     method_option :path, aliases: "-p", desc: "Path to YAML file or directory (defaults to config/locales)"
@@ -26,6 +29,7 @@ module Honyaku
                  desc: "Specify which AI model to use (defaults to gpt-4, use gpt-3.5-turbo for faster but less accurate translations)"
     method_option :backup, aliases: "-b", type: :boolean, desc: "Create .bak files before modifying"
     method_option :force, type: :boolean, desc: "Retranslate files even if target is newer than source"
+    method_option :keep_invalid, type: :boolean, desc: "Keep files with invalid YAML instead of retrying translation"
     def translate(locale)
       api_key = ENV["HONYAKU_OPENAI_API_KEY"] || ENV["OPENAI_API_KEY"]
       unless api_key
@@ -58,9 +62,9 @@ module Honyaku
       puts "📂 Processing files in #{path}..."
 
       translator = Translator.new(model: model, translation_rules: rules)
-      
+
       if File.file?(path)
-        process_file(path, translator, source_locale, locale)
+        process_file(path, translator, source_locale, locale, options[:keep_invalid])
       else
         files = Dir.glob("#{path}/**/*.yml")
         if files.empty?
@@ -69,7 +73,7 @@ module Honyaku
           exit 1
         end
         files.each do |file|
-          process_file(file, translator, source_locale, locale)
+          process_file(file, translator, source_locale, locale, options[:keep_invalid])
         end
       end
 
@@ -178,7 +182,7 @@ module Honyaku
       rules.reverse.partition { |r| !r[:locale_specific] }.flatten
     end
 
-    def process_file(file_path, translator, source_locale, target_locale)
+    def process_file(file_path, translator, source_locale, target_locale, keep_invalid = false)
       # Check if this is a source locale file we should translate
       source_pattern = /#{source_locale}(\/|\.yml)/
       return unless file_path =~ source_pattern
@@ -239,13 +243,18 @@ module Honyaku
               if options[:backup] && !File.exist?("#{target_file}.bak")
                 FileUtils.cp(target_file, "#{target_file}.bak")
               end
-              
+
               File.write(target_file, fixed_content)
               puts "✨ Fixed YAML formatting issues"
             end
             break # Success! Exit the loop
           rescue => e
-            if e.message.include?("needs retranslation") && attempts < max_attempts
+            if keep_invalid
+              puts "⚠️  Invalid YAML detected, but keeping file as requested (--keep-invalid flag)"
+              puts "    Error: #{e.message}"
+              puts "    You can manually correct the YAML syntax in: #{target_file}"
+              break # Keep the invalid file and exit the loop
+            elsif e.message.include?("needs retranslation") && attempts < max_attempts
               puts "⚠️  Translation attempt #{attempts} produced invalid YAML, retrying..."
               # Clean up the file before retrying
               File.unlink(target_file) if File.exist?(target_file)
